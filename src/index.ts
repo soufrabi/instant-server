@@ -30,7 +30,7 @@ io.on('connection', (socket) => {
         }
         else {
             console.log(`Send Message ${msg} to Room ${room}`)
-            socket.in(room).emit('receive-message', msg)
+            io.in(room).emit('receive-message', msg)
         }
     })
 
