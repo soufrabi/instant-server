@@ -23,10 +23,22 @@ io.on('connection', (socket) => {
         console.log(`User ${socket.id} disconnected`)
     })
 
-    socket.on('send-message', (msg) => {
-        console.log(`Send-Message : ${msg}`)
-        io.emit('receive-message', msg)
+    socket.on('send-message', (msg, room) => {
+        if (room === "") {
+            console.log(`Send-Message to All : ${msg}`)
+            io.emit('receive-message', msg)
+        }
+        else {
+            console.log(`Send Message ${msg} to Room ${room}`)
+            socket.in(room).emit('receive-message', msg)
+        }
     })
+
+    socket.on('join-room', (room) => {
+        console.log(`User ${socket.id} joins Room ${room}`)
+        socket.join(room)
+    })
+
 
 })
 
