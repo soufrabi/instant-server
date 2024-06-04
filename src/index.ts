@@ -2,12 +2,14 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io'
 
+const isProductionEnvironment: boolean = (process.env.NODE_ENV === 'production')
+const isLogChatMessagesEnabled: boolean = !isProductionEnvironment
 
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server, {
     cors: {
-        origin: (process.env.NODE_ENV === "production") ? process.env.WEBSITE_URL_DOMAIN : "http://localhost:3000"
+        origin: isProductionEnvironment ? process.env.WEBSITE_URL_DOMAIN : "http://localhost:3000"
     }
 })
 
@@ -27,14 +29,19 @@ io.on('connection', (socket) => {
         hm.delete(socket.id)
     })
 
-    socket.on('send-message', (msg, room) => {
+    socket.on('send-message', (msg: string, room: string) => {
+        room = room.trim()
         if (room === "") {
             // console.log(`Send-Message to All : ${msg}`)
             // io.emit('receive-message', msg)
-            console.error('Error : Room number not provided with event "send-message"')
+            console.error(`Error : User ${socket.id} emitted event "send-message", but did not provide room number`)
         }
         else {
-            console.log(`Send Message ${msg} to Room ${room}`)
+            if (isLogChatMessagesEnabled) {
+                console.log(`User ${socket.id} sent message ${msg} to Room ${room}`)
+            } else {
+                console.log(`User ${socket.id} sent message to Room ${room}`)
+            }
             io.in(room).emit('receive-message', msg)
         }
     })
@@ -42,7 +49,7 @@ io.on('connection', (socket) => {
     socket.on('join-room', (room: string, cb) => {
         let previousRoom: string | null = hm.has(socket.id) ? hm.get(socket.id) : null
         if (previousRoom !== null && previousRoom === room) {
-            console.log(`User is already in room ${room}. No need to re-enter`)
+            console.log(`User ${socket.id} is already in room ${room}. No need to re-enter`)
         } else {
             if (previousRoom !== null) {
                 socket.leave(previousRoom)
