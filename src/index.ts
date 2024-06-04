@@ -5,6 +5,12 @@ import { Server } from 'socket.io'
 const isProductionEnvironment: boolean = (process.env.NODE_ENV === 'production')
 const isLogChatMessagesEnabled: boolean = !isProductionEnvironment
 
+if (isLogChatMessagesEnabled) {
+    console.log("Log Chat Messages Enabled")
+} else {
+    console.log("Log Chat Messages Disabled")
+}
+
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server, {
