@@ -2,6 +2,16 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io'
 
+
+type ResponseCallback = (responseStatusCode: number) => void
+type JoinRoomResponseCallback = (responseStatusCode: number, anonId: string) => void
+type ChatMessageData = {
+    text: string,
+    from: string,
+    to: string,
+}
+
+
 const isProductionEnvironment: boolean = (process.env.NODE_ENV === 'production')
 const isLogChatMessagesEnabled: boolean = !isProductionEnvironment
 
@@ -35,7 +45,7 @@ io.on('connection', (socket) => {
         hm.delete(socket.id)
     })
 
-    socket.on('send-message', (msg: string, room: string) => {
+    socket.on('send-message', (msgText: string, room: string) => {
         room = room.trim()
         if (room === "") {
             // console.log(`Send-Message to All : ${msg}`)
@@ -43,8 +53,14 @@ io.on('connection', (socket) => {
             console.error(`Error : User ${socket.id} emitted event "send-message", but did not provide room number`)
         }
         else {
+            const msg: ChatMessageData = {
+                text: msgText,
+                from: socket.id,
+                to: "",
+            }
+
             if (isLogChatMessagesEnabled) {
-                console.log(`User ${socket.id} sent message ${msg} to Room ${room}`)
+                console.log(`User ${socket.id} sent message ${JSON.stringify(msg)} to Room ${room}`)
             } else {
                 console.log(`User ${socket.id} sent message to Room ${room}`)
             }
@@ -52,7 +68,8 @@ io.on('connection', (socket) => {
         }
     })
 
-    socket.on('join-room', (room: string, cb) => {
+
+    socket.on('join-room', (room: string, cb: JoinRoomResponseCallback) => {
         let previousRoom: string | null = hm.has(socket.id) ? hm.get(socket.id) : null
         if (previousRoom !== null && previousRoom === room) {
             console.log(`User ${socket.id} is already in room ${room}. No need to re-enter`)
@@ -68,7 +85,21 @@ io.on('connection', (socket) => {
         }
 
         // execute callback on success
-        cb()
+        cb(0, socket.id)
+
+    })
+
+    socket.on('leave-room', (cb: ResponseCallback) => {
+        const currentRoom: string | null = hm.has(socket.id) ? hm.get(socket.id) : null
+        if (currentRoom === null) {
+            console.log(`User ${socket.id} is not any room. So, cannot leave`)
+        } else {
+            hm.delete(socket.id)
+            console.log(`User ${socket.id} left room ${currentRoom}`)
+        }
+
+        // execute callback on success
+        cb(0)
 
     })
 
